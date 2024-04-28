@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Notes</title>
+</head>
+<style>
+  :root {
+    --p: #1e2124;
+    --s: #26292e;
+    --t: #f1f1f1;
+    --lt: #cccccc;
+    --b: #131517;
+    --sp: #7289da;
+  }
+
+  * {
+    color: var(--t);
+    font-family: 'Roboto', sans-serif;
+    transition: all 0.1s ease-in-out;
+    margin: auto;
+  }
+
+  html {
+    height: 100%;
+    width: 100%;
+    background-color: var(--b);
+  }
+
+  .add-note {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: var(--sp);
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 0 10px black;
+    font-size: 40px;
+    line-height: 40px;
+    cursor: pointer;
+    text-align: center;
+    user-select: none;
+    z-index: 5;
+  }
+
+  .add-note:active {
+    transform: scale(0.9);
+  }
+
+  .rotate {
+    transform: rotate(45deg);
+  }
+
+  .notes {
+    width: 300px;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .note {
+    margin: 5px 0;
+    width: calc(100% - 10px);
+    height: 33px;
+    background-color: var(--p);
+    border-radius: 10px;
+    padding: 5px;
+    position: relative;
+  }
+
+  .note .title {
+    position: absolute;
+    top: 5px;
+    left: 7px;
+    width: calc(100% - 10px);
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    user-select: none;
+  }
+
+  .note .timestamp {
+    position: absolute;
+    bottom: 5px;
+    left: 7px;
+    font-size: 12px;
+    color: var(--lt);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    user-select: none;
+    width: calc(100% - 10px);
+  }
+
+  .menu {
+    width: 30px;
+    padding: 5px;
+    padding-bottom: 35px;
+    border-radius: 20px;
+    position: fixed;
+    bottom: 30px;
+    right: 15px;
+    background: var(--sp);
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .menu img {
+    width: 30px;
+    margin: 5px;
+    pointer: cursor;
+    user-select: none;
+  }
+
+  .menu img:active {
+    transform: scale(0.9);
+  }
+
+  .create-note {
+    background: var(--b);
+    width: 100%;
+    height: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 6;
+  }
+
+  .create-note .title {
+    position: absolute;
+    top: 35px;
+    right: 5px;
+    width: calc(100% - 20px);
+    height: 15px;
+    background: var(--b);
+    padding: 5px;
+    font-size: 15px;
+    white-space: nowrap;
+    border: none;
+    outline: none;
+    border-bottom: 2px solid var(--t);
+  }
+
+  .create-note .save {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    width: 20px;
+    user-select: none;
+    padding: 5px;
+    border-radius: 5px;
+    background: var(--p);
+  }
+
+  .create-note .top-buttons {
+    height: 25px;
+    position: absolute;
+    top: 5px;
+    right: 5px;
+  }
+
+  .create-note .top-buttons img {
+    width: 20px;
+    margin-left: 5px;
+    user-select: none;
+    padding: 5px;
+    background: var(--p);
+    border-radius: 5px;
+  }
+
+  .create-note .content {
+    position: absolute;
+    top: 62px;
+    left: 5px;
+    width: calc(100% - 20px);
+    height: calc(100% - 100px);
+    background: var(--b);
+    border-radius: 10px;
+    padding: 5px;
+    font-size: 15px;
+    border: none;
+    outline: none;
+    resize: none;
+  }
+
+  .create-note .bottom-buttons {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    width: calc(100% - 20px);
+    height: 25px;
+    user-select: none;
+  }
+
+  .create-note .bottom-buttons * {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 20px;
+    line-height: 25px;
+    display: inline-block;
+    width: 25px;
+    height: 25px;
+    user-select: none;
+    text-align: center;
+    border-radius: 5px;
+    margin-right: 5px;
+    background: var(--p);
+  }
+
+  hr {
+    border: none;
+    border-top: 2px solid var(--t);
+  }
+
+  mark {
+    background: var(--sp);
+  }
+</style>
+
+<body>
+  <div class="notes">
+  </div>
+  <div class="add-note" onclick="noteMenu()" id="addNote">+</div>
+  <script>
+    loadUI();
+
+    function noteMenu() {
+      const button = document.getElementById("addNote")
+      if (!button.classList.contains("rotate")) {
+        const menu = document.createElement("div");
+        menu.className = "menu";
+        menu.id = "menu"
+        menu.style.transformOrigin = "50% 100%";
+        menu.style.transform = "scaleY(0)";
+        menu.innerHTML = `<img src="assets/add.png" alt="Create" onclick="createNote()" id="btn1"><img src="assets/upload.png" alt="Upload" onclick="uploadNote()" id="btn2">`
+        document.body.appendChild(menu);
+        const btn1 = document.getElementById("btn1");
+        const btn2 = document.getElementById("btn2");
+        btn1.style.opacity = 0;
+        btn2.style.opacity = 0;
+        button.classList.add("rotate")
+        setTimeout(() => {
+          menu.style.transform = "";
+          setTimeout(() => {
+            btn1.style.opacity = 1;
+            btn2.style.opacity = 1;
+          }, 250);
+        }, 100);
+      } else {
+        button.classList.remove("rotate")
+        const menu = document.getElementById("menu");
+        const btn1 = document.getElementById("btn1");
+        const btn2 = document.getElementById("btn2");
+        btn1.style.opacity = 0;
+        btn2.style.opacity = 0;
+        setTimeout(() => {
+          menu.style.transformOrigin = "50% 100%";
+          menu.style.transform = "scaleY(0)";
+          setTimeout(() => {
+            menu.remove();
+          }, 100);
+        }, 250);
+      }
+    }
+
+    function uploadNote() {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "text/*";
+      input.onchange = () => {
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = () => {
+          let notes = localStorage.getItem("notes");
+          if (!notes) {
+            localStorage.setItem("notes", "{}");
+            notes = "{}"
+          }
+          const ts = timestamp()
+          let notesObj = JSON.parse(notes)
+          const id = Math.floor(Math.random() * 999999999);
+          notesObj[id] = {
+            title: file.name,
+            content: reader.result,
+            timestamp: ts
+          }
+          localStorage.setItem("notes", JSON.stringify(notesObj));
+          loadUI();
+        }
+        reader.readAsText(file);
+      }
+      input.click();
+    }
+
+    function timestamp() {
+      const date = new Date();
+      const month = date.getMonth() + 1;
+      const day = date.getDate();
+      const year = date.getFullYear();
+      const hours = date.getHours() % 12 || 12;
+      const minutes = date.getMinutes();
+      const ampm = date.getHours() >= 12 ? "PM" : "AM";
+      return `Last edit on ${month}/${day}/${year} at ${hours}:${minutes} ${ampm}`;
+    }
+
+    function loadUI() {
+      fetch("assets/add.png");
+      fetch("assets/upload.png");
+      if (document.getElementById("menu")) noteMenu();
+      document.querySelector(".notes").innerHTML = ""
+      let notes = localStorage.getItem("notes");
+      if (!notes) {
+        localStorage.setItem("notes", "{}")
+        notes = "{}"
+      }
+      const notesObj = JSON.parse(notes);
+      for (const id in notesObj) {
+        console.log(id)
+        const note = notesObj[id]
+        const noteDiv = document.createElement("div");
+        noteDiv.onclick = () => {
+          openNote(id)
+        }
+        noteDiv.className = "note";
+        noteDiv.innerHTML = `<span class="title" title="">${note.title || note.content || "Untitled"}</span><span class="timestamp">${note.timestamp}</span>`;
+        document.querySelector(".notes").appendChild(noteDiv);
+      }
+    }
+
+    function createNote() {
+      const note = document.createElement("div");
+      note.id = "createNote";
+      note.className = "create-note";
+      note.style.opacity = 0;
+      note.innerHTML = `
+      <img class="save" src="assets/back.png" alt="Save and exit" onclick="saveNote(null, true)">
+      <div class="top-buttons">
+        <img src="assets/view.png" alt="View" onclick="openNote(saveNote())">
+        <img src="assets/download.png" alt="Download" onclick="downloadNote(saveNote())">
+        <img src="assets/delete.png" alt="Delete" onclick="closeNote()">
+        <img src="assets/exit.png" alt="Exit without saving" onclick="closeNote()">
+      </div>
+      <input type="text" placeholder="Title" id="title" class="title">
+      <textarea placeholder="Content" id="content" class="content"></textarea>
+      <div class="bottom-buttons"><b onclick="addSymbol('**')">B</b><i onclick="addSymbol('*')">I</i><u onclick="addSymbol('__')">U</u><s onclick="addSymbol('~~')">S</s></div>`
+      document.body.appendChild(note);
+      setTimeout(() => {
+        note.style.opacity = 1;
+      }, 100);
+      shortcuts();
+    }
+
+    function addSymbol(keyOne, keyTwo = keyOne) {
+      const content = document.querySelector(".content");
+      content.focus();
+      const start = content.selectionStart;
+      const end = content.selectionEnd;
+      content.value = content.value.substring(0, start) + keyOne + content.value.substring(start, end) + keyTwo + content.value.substring(end);
+      content.selectionStart = start + keyOne.length;
+      content.selectionEnd = end + keyTwo.length;
+    }
+
+    function saveNote(id, fade) {
+      window.location.href = "#"
+      if (id) {
+        let notes = localStorage.getItem("notes");
+        if (!notes) {
+          localStorage.setItem("notes", "{}");
+          notes = "{}"
+        }
+        const notesObj = JSON.parse(notes);
+        const title = document.getElementById("title").value || notesObj[id].title;
+        const content = document.getElementById("content").value || notesObj[id].content;
+        const ts = timestamp()
+        notesObj[id] = {
+          title: title,
+          content: content,
+          timestamp: ts
+        }
+        localStorage.setItem("notes", JSON.stringify(notesObj));
+        loadUI();
+        if (fade) return fadeout(document.getElementById("createNote"));
+        document.getElementById("createNote").remove();
+      } else {
+        const title = document.getElementById("title").value
+        const content = document.getElementById("content").value
+        const ts = timestamp()
+        let notes = localStorage.getItem("notes");
+        if (!notes) {
+          localStorage.setItem("notes", "{}");
+          notes = "{}"
+        }
+        const notesObj = JSON.parse(notes);
+        const id = Math.floor(Math.random() * 999999999);
+        notesObj[id] = {
+          title: title,
+          content: content,
+          timestamp: ts
+        }
+        localStorage.setItem("notes", JSON.stringify(notesObj));
+        loadUI();
+        if (fade) {
+          fadeout(document.getElementById("createNote"));
+        } else {
+          document.getElementById("createNote").remove();
+        }
+        return id;
+      }
+    }
+
+    function openNote(id) {
+      window.location.href = "#view:" + id;
+      let fade = 0
+      if (document.getElementById("createNote")) {
+        saveNote(id, false);
+        fade = 1
+      }
+      const note = document.createElement("div");
+      const notes = JSON.parse(localStorage.getItem("notes"));
+      const noteObj = notes[id];
+      note.id = "createNote";
+      note.className = "create-note";
+      note.style.opacity = fade;
+      note.innerHTML = `
+      <img class="save" src="assets/back.png" alt="Save and exit" onclick="closeNote()">
+      <div class="top-buttons">
+        <img src="assets/edit.png" alt="Edit" onclick="editNote('${id}')">
+        <img src="assets/download.png" alt="Download" onclick="downloadNote('${id}')">
+        <img src="assets/delete.png" alt="Delete" onclick="deleteNote('${id}')">
+        <img src="assets/exit.png" alt="Exit without saving" onclick="closeNote()">
+      </div>
+      <div class="title" id="title">${cleanText(noteObj.title || "")}</div>
+      <div placeholder="Content" id="content" class="content">${cleanText(noteObj.content)}</div>`
+      document.body.appendChild(note);
+      setTimeout(() => {
+        note.style.opacity = 1;
+      }, 100)
+    }
+
+    function editNote(id) {
+      window.location.href = "#edit:" + id;
+      let fade = 0;
+      if (document.getElementById("createNote")) {
+        document.getElementById("createNote").remove();
+        fade = 1;
+      }
+      const note = document.createElement("div");
+      const notes = JSON.parse(localStorage.getItem("notes"));
+      const noteObj = notes[id];
+      note.id = "createNote";
+      note.className = "create-note";
+      note.style.opacity = fade
+      note.innerHTML = `
+      <img class="save" src="assets/back.png" alt="Save and exit" onclick="saveNote('${id}', true)">
+      <div class="top-buttons">
+        <img src="assets/view.png" alt="View" onclick="openNote('${id}')">
+        <img src="assets/download.png" alt="Download" onclick="downloadNote('${id}')">
+        <img src="assets/delete.png" alt="Delete" onclick="deleteNote('${id}')">
+        <img src="assets/exit.png" alt="Exit without saving" onclick="closeNote()">
+      </div>
+      <input class="title" id="title" value="${noteObj.title || ""}"">
+      <textarea placeholder="Content" id="content" class="content">${noteObj.content}</textarea>
+      <div class="bottom-buttons"><b onclick="addSymbol('**')">B</b><i onclick="addSymbol('*')">I</i><u onclick="addSymbol('__')">U</u><s onclick="addSymbol('~~')">S</s></div>`
+      document.body.appendChild(note);
+      setTimeout(() => {
+        note.style.opacity = 1
+      }, 100)
+      shortcuts();
+    }
+
+    function cleanText(text) {
+      let res = text.replace(/</g, "&lt;");
+      res = res.replace(/>/g, "&gt;");
+      res = res.replace(/&/g, "&amp;");
+
+      const boldRegex = /(\*{2})([^*]+?)(\*{2})/g;
+      const italicRegex = /(\*{1})([^*]+?)(\*{1})/g;
+      res = res.replace(boldRegex, "<b>$2</b>");
+      res = res.replace(italicRegex, "<i>$2</i>");
+
+      const underlineRegex = /(__{1})([^_]+?)(__{1})/g;
+      const strikethroughRegex = /(~~{1})([^~]+?)(~~{1})/g;
+      const highlightRegex = /(=={1})([^=]+?)(=={1})/g;
+      res = res.replace(underlineRegex, "<u>$2</u>");
+      res = res.replace(strikethroughRegex, "<del>$2</del>");
+      res = res.replace(highlightRegex, "<mark>$2</mark>");
+
+      const hruleRegex = /^ {0,3}(-{3,}|_{3,}|(\*{3,}))$/gm;
+      res = res.replace(hruleRegex, "<hr>");
+
+      const headerRegex = /^ {0,3}(#{1,6})([^\n]+)/gm;
+      res = res.replace(headerRegex, (match, p1, p2) => {
+        const level = p1.length;
+        return `<h${level}>${p2.trim()}</h${level}>`;
+      });
+
+      res = res.replace(/ /g, "&nbsp;");
+      res = res.replace(/\n/g, "<br>");
+
+      return res;
+    }
+
+    function closeNote() {
+      window.location.href = "#"
+      if (document.getElementById("createNote")) fadeout(document.getElementById("createNote"))
+    }
+
+    function downloadNote(id) {
+      if (document.getElementById("createNote")) saveNote(id);
+      const notes = JSON.parse(localStorage.getItem("notes"));
+      const noteObj = notes[id];
+      const blob = new Blob([noteObj.content], {type: "text/plain"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = noteObj.title || "Untitled" + ".txt";
+      a.click();
+    }
+
+    function deleteNote(id) {
+      window.location.href = "#"
+      const notes = JSON.parse(localStorage.getItem("notes"));
+      delete notes[id];
+      localStorage.setItem("notes", JSON.stringify(notes));
+      loadUI();
+      if (document.getElementById("createNote")) fadeout(document.getElementById("createNote"));
+    }
+
+    function shortcuts() {
+      const input = document.getElementById("content");
+      input.addEventListener("keydown", (e) => {
+        if ((e.key == "b" || e.key == "B") && e.ctrlKey) {
+          e.preventDefault();
+          addSymbol("**");
+        }
+        if ((e.key == "i" || e.key == "I") && e.ctrlKey) {
+          e.preventDefault();
+          addSymbol("*");
+        }
+        if ((e.key == "u" || e.key == "U") && e.ctrlKey) {
+          e.preventDefault();
+          addSymbol("__");
+        }
+        if ((e.key == "s" || e.key == "S") && e.ctrlKey) {
+          e.preventDefault();
+          addSymbol("~~");
+        }
+        if ((e.key == "h" || e.key == "H") && e.ctrlKey) {
+          e.preventDefault();
+          addSymbol("==");
+        }
+      });
+    }
+
+    const uri = window.location.href.split("#")[1];
+    if (uri) {
+      if (uri.startsWith("view:")) {
+        const notes = localStorage.getItem("notes");
+        if (!notes) throw new Error("No notes found");
+        const notesObj = JSON.parse(notes);
+        const id = uri.split(":")[1];
+        if (!id) throw new Error("No note ID found");
+        if (!notesObj[id]) throw new Error("Invalid note ID");
+        openNote(id);
+      } else if (uri.startsWith("edit:")) {
+        const notes = localStorage.getItem("notes");
+        if (!notes) throw new Error("No notes found");
+        const notesObj = JSON.parse(notes);
+        const id = uri.split(":")[1];
+        if (!id) throw new Error("No note ID found");
+        if (!notesObj[id]) throw new Error("Invalid note ID");
+        editNote(id);
+      }
+    }
+
+    function fadeout(elm) {
+      elm.style.opacity = 0;
+      setTimeout(function () {
+        elm.remove();
+      }, 100);
+    }
+  </script>
+</body>
+
+</html>
