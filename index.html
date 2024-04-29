@@ -192,6 +192,13 @@
     border: none;
     outline: none;
     resize: none;
+    word-wrap: break-word;
+    word-break: hyphen;
+  }
+
+  .content img, video {
+    border-radius: 10px;
+    max-width: 100px;
   }
 
   .create-note .bottom-buttons {
@@ -224,6 +231,21 @@
 
   mark {
     background: var(--sp);
+  }
+
+  code {
+    font-family: monospace;
+    background: var(--s);
+  }
+
+  pre {
+    background: var(--s);
+    padding: 5px;
+    border-radius: 10px;
+    overflow: auto;
+    max-width: 300px;
+    max-height: 500px;
+    margin: 5px 0;
   }
 </style>
 
@@ -310,7 +332,7 @@
       const hours = date.getHours() % 12 || 12;
       const minutes = date.getMinutes();
       const ampm = date.getHours() >= 12 ? "PM" : "AM";
-      return `Last edit on ${month}/${day}/${year} at ${hours}:${minutes} ${ampm}`;
+      return `Last edit on ${month}/${day}/${year} at ${hours}:${minutes.length == 1 ? "0" + minutes : minutes} ${ampm}`;
     }
 
     function loadUI() {
@@ -418,7 +440,7 @@
       }
     }
 
-    function openNote(id) {
+    async function openNote(id) {
       window.location.href = "#view:" + id;
       let fade = 0
       if (document.getElementById("createNote")) {
@@ -439,8 +461,8 @@
         <img src="assets/delete.png" alt="Delete" onclick="deleteNote('${id}')">
         <img src="assets/exit.png" alt="Exit without saving" onclick="closeNote()">
       </div>
-      <div class="title" id="title">${cleanText(noteObj.title || "")}</div>
-      <div placeholder="Content" id="content" class="content">${cleanText(noteObj.content)}</div>`
+      <div class="title" id="title">${await cleanText(noteObj.title || "")}</div>
+      <div placeholder="Content" id="content" class="content">${await cleanText(noteObj.content)}</div>`
       document.body.appendChild(note);
       setTimeout(() => {
         note.style.opacity = 1;
@@ -468,8 +490,8 @@
         <img src="assets/delete.png" alt="Delete" onclick="deleteNote('${id}')">
         <img src="assets/exit.png" alt="Exit without saving" onclick="closeNote()">
       </div>
-      <input class="title" id="title" value="${noteObj.title || ""}"">
-      <textarea placeholder="Content" id="content" class="content">${noteObj.content}</textarea>
+      <input class="title" id="title" placeholder="Title" value="${noteObj.title || ""}"">
+      <textarea placeholder="Content" id="content" class="content" placeholder="Content">${noteObj.content}</textarea>
       <div class="bottom-buttons"><b onclick="addSymbol('**')">B</b><i onclick="addSymbol('*')">I</i><u onclick="addSymbol('__')">U</u><s onclick="addSymbol('~~')">S</s></div>`
       document.body.appendChild(note);
       setTimeout(() => {
@@ -478,36 +500,45 @@
       shortcuts();
     }
 
-    function cleanText(text) {
-      let res = text.replace(/</g, "&lt;");
-      res = res.replace(/>/g, "&gt;");
-      res = res.replace(/&/g, "&amp;");
+    async function cleanText(text) {
+     let res = text.replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;");
 
-      const boldRegex = /(\*{2})([^*]+?)(\*{2})/g;
-      const italicRegex = /(\*{1})([^*]+?)(\*{1})/g;
-      res = res.replace(boldRegex, "<b>$2</b>");
-      res = res.replace(italicRegex, "<i>$2</i>");
+     res = res.replace(/(\*{2})([^*]+?)(\*{2})/g, "<b>$2</b>")
+               .replace(/(\*{1})([^*]+?)(\*{1})/g, "<i>$2</i>")
+               .replace(/(__{1})([^_]+?)(__{1})/g, "<u>$2</u>")
+               .replace(/(~~{1})([^~]+?)(~~{1})/g, "<del>$2</del>")
+               .replace(/(=={1})([^=]+?)(=={1})/g, "<mark>$2</mark>")
+               .replace(/(```{1})\n([^`]+?)\n(```{1})/g, "<pre><code>$2</code></pre>")
+               .replace(/(`{1})([^`]+?)(`{1})/g, "<code>$2</code>")
+               .replace(/^ {0,3}(-{3,}|_{3,}|(\*{3,}))$/gm, "<hr>")
+               .replace(/^ {0,3}(#{1,6})([^\n]+)/gm, (match, p1, p2) => `<h${p1.length}>${p2.trim()}</h${p1.length}>`)
+               .replace(/ /g, "&nbsp;")
+               .replace(/\n/g, "<br>");
 
-      const underlineRegex = /(__{1})([^_]+?)(__{1})/g;
-      const strikethroughRegex = /(~~{1})([^~]+?)(~~{1})/g;
-      const highlightRegex = /(=={1})([^=]+?)(=={1})/g;
-      res = res.replace(underlineRegex, "<u>$2</u>");
-      res = res.replace(strikethroughRegex, "<del>$2</del>");
-      res = res.replace(highlightRegex, "<mark>$2</mark>");
+     const linkRegex = /(?:(?:https?|ftp):\/\/)?[\w/\-?=%.]+\.[\w/\-&?=%.]+(?![^<>]*<\/a>)(?![^"]*")/g;
+     const matches = [...res.matchAll(linkRegex)];
+     const replacements = await Promise.all(matches.map(async ([match]) => {
+        const mediaObj = await isMedia(match);
+        if (!mediaObj) {
+          return `<a href="${match}" target="_blank">${match}</a>`;
+        } else {
+          if (mediaObj === "image") {
+            return `<img src="${match}">`;
+          } else if (mediaObj === "video") {
+            return `<video controls><source src="${match}"></video>`;
+          } else if (mediaObj === "audio") {
+            return `<audio controls><source src="${match}"></audio>`;
+          } else {
+            return `<a href="${match}" target="_blank">${match}</a>`;
+          }
+        }
+     }));
 
-      const hruleRegex = /^ {0,3}(-{3,}|_{3,}|(\*{3,}))$/gm;
-      res = res.replace(hruleRegex, "<hr>");
+     res = res.replace(linkRegex, () => replacements.shift());
 
-      const headerRegex = /^ {0,3}(#{1,6})([^\n]+)/gm;
-      res = res.replace(headerRegex, (match, p1, p2) => {
-        const level = p1.length;
-        return `<h${level}>${p2.trim()}</h${level}>`;
-      });
-
-      res = res.replace(/ /g, "&nbsp;");
-      res = res.replace(/\n/g, "<br>");
-
-      return res;
+     return res;
     }
 
     function closeNote() {
@@ -588,6 +619,29 @@
       setTimeout(function () {
         elm.remove();
       }, 100);
+    }
+
+    async function isMedia(url) {
+      try {
+        const controller = new AbortController();
+        const signal = controller.signal;
+        setTimeout(() => controller.abort(), 1000); 
+        const response = await fetch(url, { method: 'HEAD', signal });
+        const contentType = response.headers.get('content-type');
+        console.log(contentType);
+        if (contentType.startsWith('image/')) {
+          return 'image';
+        } else if (contentType.startsWith('video/')) {
+          return 'video';
+        } else if (contentType.startsWith('audio/')) {
+          return 'audio';
+        } else {
+          return false;
+        }
+      } catch (error) {
+        console.error('Error fetching resource:', error);
+        return false;
+      }
     }
   </script>
 </body>
