@@ -494,7 +494,7 @@
       </div>
       <input class="title" id="title" placeholder="Title" value="${noteObj.title || ""}"">
       <textarea placeholder="Content" id="content" class="content" placeholder="Content">${noteObj.content}</textarea>
-      <div class="bottom-buttons"><b onclick="addSymbol('**')">B</b><i onclick="addSymbol('*')">I</i><u onclick="addSymbol('__')">U</u><s onclick="addSymbol('~~')">S</s></div>`
+      <div class="bottom-buttons"><b onclick="addSymbol('**')">B</b><i onclick="addSymbol('*')">I</i><u onclick="addSymbol('__')">U</u><s onclick="addSymbol('~~')">S</s><mark onclick="addSymbol('==')">M</mark><code onclick="addSymbol('\`')">C</code></div>`
       document.body.appendChild(note);
       setTimeout(() => {
         note.style.opacity = 1
